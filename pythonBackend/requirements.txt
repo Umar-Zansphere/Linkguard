@@ -6,3 +6,5 @@ tldextract
 python-whois
 pyopenssl
 beautifulsoup4
+aioftp
+asyncssh
