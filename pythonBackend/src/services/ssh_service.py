@@ -1,25 +1,41 @@
+# services/ssh_analysis_service.py
+
 import asyncssh
 import asyncio
 from urllib.parse import urlparse
-import whois
+import httpx
 
+from .base_service import BaseAnalysisService
 
-class SSHAnalysisService:
+class SSHAnalysisService(BaseAnalysisService):
     async def analyze(self, url: str) -> dict:
         parsed_url = urlparse(url)
         hostname = parsed_url.hostname
         port = parsed_url.port or 22
 
+        # Start with common checks
+        ip_address = self._get_ip_address(hostname)
+        whois_info, dns_whois_valid = self._check_dns_whois(hostname)
+        lexical_analysis = self._perform_lexical_analysis(url)
+
+        async with httpx.AsyncClient() as client:
+            abuseipdb_result = await self._check_abuseipdb(client, ip_address)
+
         results = {
+            "protocol": "ssh",
+            "url": url,
+            "ip_address": ip_address,
+            "whois_info": whois_info,
+            "dns_whois_valid": dns_whois_valid,
+            "lexical_analysis": lexical_analysis,
+            "abuseipdb": abuseipdb_result,
             "is_reachable": False,
             "server_banner": None,
             "host_key_type": None,
             "host_key_fingerprint": None,
-            "dns_whois_info": None,
         }
 
         try:
-            # Connect to the SSH server to grab its banner and host key
             conn = await asyncio.wait_for(
                 asyncssh.connect(hostname, port, known_hosts=None),
                 timeout=5
@@ -39,13 +55,4 @@ class SSHAnalysisService:
         except (ConnectionRefusedError, asyncio.TimeoutError, asyncssh.Error):
             results["is_reachable"] = False
 
-        results["dns_whois_info"] = await asyncio.to_thread(self._get_dns_whois, hostname)
-
         return results
-
-    def _get_dns_whois(self, hostname):
-        try:
-            w = whois.whois(hostname)
-            return {"registrar": w.registrar, "creation_date": str(w.creation_date)}
-        except Exception:
-            return {"error": "WHOIS lookup failed"}
