@@ -13,6 +13,7 @@ export default function LinkGuardian() {
 
   // This hook listens for URLs passed from the extension's context menu
   useEffect(() => {
+    // The 'chrome' object only exists when running as an extension
     if (window.chrome && chrome.storage) {
       chrome.storage.local.get(['urlToScan'], (data) => {
         if (data.urlToScan) {
@@ -56,21 +57,30 @@ export default function LinkGuardian() {
     setStatus("idle");
   };
 
-  // --- CSS CLASSES MODIFIED FOR POPUP VIEW ---
+  // --- CSS LAYOUT MODIFIED FOR RESPONSIVE POPUP VIEW ---
   return (
     // This outer div now fills the 600x650 container from index.html
-    <div className="w-full h-full bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center font-sans text-white">
-      {/* This div allows for scrolling if content overflows */}
-      <div className="relative w-full h-full flex flex-col items-center justify-start p-6 bg-black/30 overflow-y-auto">
+    <div className="w-full h-full bg-gradient-to-br from-gray-900 via-black to-gray-900 font-sans text-white">
+      {/* 
+        This is the main layout container.
+        - flex-col arranges children vertically (Header on top, Content below).
+        - h-full makes it fill the parent's height.
+        - overflow-y-auto allows scrolling if results are long.
+      */}
+      <div className="relative w-full h-full flex flex-col p-6 bg-black/30 overflow-y-auto">
         <BackgroundGrid />
         
-        {/* Header with reduced padding */}
-        <div className="text-center z-10 pt-4 pb-6">
+        {/* Header: This sits at the top. 'flex-shrink-0' prevents it from shrinking. */}
+        <div className="text-center z-10 pt-4 pb-6 flex-shrink-0">
           <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 to-purple-400">LinkGuardian</h1>
           <p className="text-gray-400 text-sm mt-1">Cybernetic Link Analysis Protocol</p>
         </div>
 
-        {/* Main content area */}
+        {/* 
+          Main Content Area:
+          - flex-grow allows this div to expand and fill all available vertical space.
+          - The content inside (form, loader, results) will be centered within this expanded area.
+        */}
         <div className="w-full flex-grow flex items-center justify-center z-10">
           {status === "idle" && (
             <form onSubmit={handleScan} className="w-full max-w-xl animate-in fade-in duration-500">
